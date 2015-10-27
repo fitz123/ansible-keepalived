@@ -77,7 +77,7 @@ virtual_server {{ value.virtual_server_ip }} {{ value.virtual_server_port }} {
 
   {% for real_server_ip in value.real_servers -%}
   real_server {{ real_server_ip }} {{ value.virtual_server_port }} {
-    weight 1024
+    weight {{ value.weight | default ('512') }}
     TCP_CHECK {
       connect_port {{ value.virtual_server_port }}
       connect_timeout 3
