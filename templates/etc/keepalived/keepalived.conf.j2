@@ -29,6 +29,9 @@ vrrp_instance {{ key }} {
   state {{ value.state }}
   priority {{ value.priority }}
   virtual_router_id {{ value.virtual_router_id }}
+  {% if nopreempt is defined and nopreempt %}
+  nopreempt
+  {% endif %}
   {% if value.advert_int is defined and value.advert_int | int -%}
   advert_int {{ value.advert_int }}
   {% endif -%}
