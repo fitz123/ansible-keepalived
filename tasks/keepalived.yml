@@ -63,3 +63,7 @@
     - configuration
     - keepalived
     - keepalived-start-enable-service
+
+- name: vpn script
+  copy: src=openvpn.sh dest=/etc/keepalived/
+        owner=root group=adm mode=0740
