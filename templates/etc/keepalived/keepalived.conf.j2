@@ -29,12 +29,13 @@ vrrp_instance {{ key }} {
   state {{ value.state }}
   priority {{ value.priority }}
   virtual_router_id {{ value.virtual_router_id }}
-  {% if nopreempt is defined and nopreempt %}
-  nopreempt
-  {% endif %}
+  {% if value.preempt is not defined or value.preempt %}{% else %}nopreempt{% endif %}
   {% if value.advert_int is defined and value.advert_int | int -%}
   advert_int {{ value.advert_int }}
   {% endif -%}
+  {% if value.notify is defined %}
+  notify {{ value.notify }}
+  {% endif %}
 
   {% if value.smtp_alert is defined and value.smtp_alert | bool -%}
   smtp_alert
@@ -50,7 +51,7 @@ vrrp_instance {{ key }} {
   {{ virtual_ipaddress }}
   {% endfor -%}}
 
-  {% if track_script is defined -%}
+  {% if value.track_scripts is defined -%}
   track_script {
   {% for track_script in value.track_scripts %}
   {{ track_script }}
@@ -68,8 +69,8 @@ virtual_server {{ value.virtual_server_ip }} {{ value.virtual_server_port }} {
   lb_algo {{ value.lb_algo | default('rr') }}
   lb_kind {{ value.lb_kind | default('NAT') }}
   protocol {{ value.protocol | default('TCP') }}
-  {% if  persistence_timeout is defined -%}
-  persistence_timeout {{  persistence_timeout }}
+  {% if  value.persistence_timeout is defined -%}
+  persistence_timeout {{  value.persistence_timeout }}
   {% endif -%}
   {% if value.ha_suspend is defined and ha_suspend | bool -%}
   ha_suspend
@@ -77,7 +78,7 @@ virtual_server {{ value.virtual_server_ip }} {{ value.virtual_server_port }} {
 
   {% for real_server_ip in value.real_servers -%}
   real_server {{ real_server_ip }} {{ value.virtual_server_port }} {
-    weight {{ value.weight | default ('512') }}
+    weight {{ value.weight | default ('1') }}
     TCP_CHECK {
       connect_port {{ value.virtual_server_port }}
       connect_timeout 3
