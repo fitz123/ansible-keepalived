@@ -6,6 +6,11 @@
     state: restarted
 
 - name: reload keepalived
-  service:
-    name: keepalived
-    state: reloaded
+  sudo: yes
+  command: service keepalived reload
+
+# by some reason it doesn't work
+#- name: reload keepalived
+#  service:
+#    name: keepalived
+#    state: reloaded
