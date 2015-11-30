@@ -39,6 +39,7 @@
     - configuration
     - keepalived
     - keepalived-configuration
+    - nat
 
 - name: allow binding non-local IP
   sysctl:
