@@ -4,7 +4,6 @@
   yum:
     name: "{{ item }}"
     state: present
-    update_cache: true
   with_items: keepalived_dependencies
   when: ansible_os_family == 'RedHat'
   tags:
@@ -16,9 +15,7 @@
 - name: install dependencies
   apt:
     name: "{{ item }}"
-    state: latest
-    update_cache: true
-    cache_valid_time: 3600
+    state: present
   with_items: keepalived_dependencies
   when: ansible_os_family == 'Debian'
   tags:
