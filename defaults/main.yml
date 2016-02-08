@@ -12,3 +12,8 @@ keepalived_global_defs_smtp_connect_timeout: 30
 keepalived_vrrp_scripts: {}
 
 keepalived_vrrp_instances: {}
+
+
+# defaults file for conntrackd
+conntrackd_ignore: []
+conntrackd_multicast_group: 3780

@@ -31,11 +31,12 @@
     owner: root
     group: root
     mode: 0640
-  notify: reload keepalived
+  notify: restart keepalived
+  #when: consul_template is not defined or not consul_template
   tags:
     - configuration
     - keepalived
-    - keepalived-configuration
+    - keepalived_conf
     - nat
 
 - name: allow binding non-local IP
@@ -53,7 +54,7 @@
 - name: start and enable service
   service:
     name: keepalived
-    state: started
+    #state: started
     enabled: true
     # Pattern is needed to fix failure in Ubuntu 10.04 and idempotency in 12.04 and 14.04
     pattern: /usr/sbin/keepalived
@@ -63,5 +64,6 @@
     - keepalived-start-enable-service
 
 - name: vpn script
-  copy: src=openvpn.sh dest=/etc/keepalived/
-        owner=root group=adm mode=0740
+  template: src=etc/keepalived/openvpn.sh.j2 dest=/etc/keepalived/openvpn.sh
+            owner=root group=adm mode=0740
+  when: openvpn_enabled is defined and openvpn_enabled

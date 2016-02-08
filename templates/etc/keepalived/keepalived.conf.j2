@@ -29,20 +29,48 @@ vrrp_script {{ key }} {
 }
 {% endfor -%}
 
+vrrp_sync_group {{ app }} {
+    group {
+{% for key, value in keepalived_vrrp_instances.iteritems() %}
+      {{ key }}     
+{% endfor %}
+    }
+{% if conntrackd_enabled is defined and conntrackd_enabled %}
+    notify_master "/etc/conntrackd/primary-backup.sh primary"
+    notify_backup "/etc/conntrackd/primary-backup.sh backup"
+    notify_fault "/etc/conntrackd/primary-backup.sh fault"
+{% endif %}
+{% if quagga_enabled is defined and quagga_enabled %}
+{% for key, item in interfaces.iteritems() %}
+{% if item.label == 'RT' %}
+    #notify_master "/sbin/ifup {{ key }}:{{ item.label }}"
+    #notify_backup "/sbin/ifdown {{ key }}:{{ item.label }}"
+    #notify_fault  "/sbin/ifdown {{ key }}:{{ item.label }}"
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if openvpn_enabled is defined and openvpn_enabled %}
+    notify "/etc/keepalived/openvpn.sh"
+{% endif %}
+}
+
 {% for key, value in keepalived_vrrp_instances.iteritems() %}
 vrrp_instance {{ key }} {
   interface {{ value.interface }}
-  state {{ value.state }}
+  state {{ value.state | default('BACKUP') }}
   priority {{ value.priority }}
   virtual_router_id {{ value.virtual_router_id }}
-  {% if value.preempt is not defined or value.preempt %}{% else %}nopreempt{% endif %}
-  {% if value.advert_int is defined and value.advert_int | int -%}
+{% if value.preempt is defined and value.preempt %}
+  preempt
+{% else %}
+  nopreempt
+{% endif %}
+{% if value.advert_int is defined and value.advert_int | int -%}
   advert_int {{ value.advert_int }}
-  {% endif -%}
-  {% if value.notify is defined %}
+{% endif %}
+{% if value.notify is defined %}
   notify {{ value.notify }}
-  {% endif %}
-
+{% endif %}  
   {% if value.smtp_alert is defined and value.smtp_alert | bool -%}
   smtp_alert
   {% endif -%}
@@ -53,9 +81,40 @@ vrrp_instance {{ key }} {
   }
 
   virtual_ipaddress {
-  {% for virtual_ipaddress in value.virtual_ipaddresses %}
-  {{ virtual_ipaddress }}
-  {% endfor -%}}
+{% if key == 'TECH' %}
+{% for key, item in interfaces.iteritems() %}
+{% if (item.label != 'MGMT' and item.label != 'HB' and item.label != 'RT') %}
+    {{ item.ip4_address | ipaddr('host') | ipaddr('1') | ipaddr('address') }} brd {{ item.ip4_address | ipaddr('broadcast') }} dev {{ key }} label {{ key }}:{{ item.label }}-GW
+{% endif %}
+{% endfor %}
+    {{ masquarade_address }} dev {{ masquerade_interface }} label {{ masquerade_interface }}:MASQ
+{% endif %}
+{% if value.virtual_ipaddresses is defined %}
+{% for item in value.virtual_ipaddresses %}
+    {{ item.ip | ipaddr('host') }} brd {{ item.ip | ipaddr('broadcast') }} dev {{ item.dev }} label {{ item.dev }}:{{ item.label }}
+{% endfor %}
+{% endif %}
+  }
+
+
+  virtual_routes {
+    default via {{ internet_gateway | ipaddr('address') }} dev {{ masquerade_interface }}
+  }
+
+  track_interface {
+{% if key == 'TECH' %}
+{% for key, item in interfaces.iteritems() %}
+{% if item.label != 'MGMT' %}
+    {{ key }}
+{% endif %}
+{% endfor %}
+    {{ masquerade_interface }}
+{% else %}
+{% for item in value.virtual_ipaddresses %}
+    {{ item.dev }}
+{% endfor %}
+{% endif %}
+  }
 
   {% if value.track_scripts is defined -%}
   track_script {
@@ -64,6 +123,7 @@ vrrp_instance {{ key }} {
   {% endfor -%}
   }
 {% endif -%}
+
 }
 {% endfor %}
 
@@ -81,16 +141,19 @@ virtual_server {{ value.virtual_server_ip }} {{ value.virtual_server_port }} {
   {% if value.ha_suspend is defined and ha_suspend | bool -%}
   ha_suspend
   {% endif %}
-
+{% if value.real_servers is defined %}
   {% for real_server_ip in value.real_servers -%}
   real_server {{ real_server_ip }} {{ value.virtual_server_port }} {
     weight {{ value.weight | default ('1') }}
+    {% if value.tcp_checks is not defined or value.tcp_checks -%}
     TCP_CHECK {
       connect_port {{ value.virtual_server_port }}
       connect_timeout 3
     }
+    {% endif -%}
   }
   {% endfor -%}
+{% endif %}
 }
 {% endfor -%}
 {% endif %}

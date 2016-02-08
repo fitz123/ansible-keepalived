@@ -5,12 +5,12 @@
     name: keepalived
     state: restarted
 
-- name: reload keepalived
-  sudo: yes
-  command: service keepalived reload
+- name: restart conntrackd
+  service:
+    name: conntrackd
+    state: restarted
 
-# by some reason it doesn't work
-#- name: reload keepalived
-#  service:
-#    name: keepalived
-#    state: reloaded
+- name: reload keepalived
+  service:
+    name: keepalived
+    state: reloaded

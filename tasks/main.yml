@@ -1,5 +1,24 @@
 # tasks file for keepalived
 ---
+
+- set_fact: conntrackd_enabled=yes
+  when: keepalived_enabled is defined and keepalived_enabled
+  tags: always
+
 - include: keepalived.yml
   when: keepalived_enabled
-  tags: [keepalived]
+  tags: 
+    - keepalived
+
+- include: conntrackd.yml
+  when: keepalived_enabled and conntrackd_enabled
+  tags: 
+    - keepalived
+    - conntrackd
+
+#- include: consul-templates.yml
+#  when: keepalived_enabled and consul_template
+#  tags: 
+#    - keepalived
+#    - consul_template
+#    - keepalived_conf
