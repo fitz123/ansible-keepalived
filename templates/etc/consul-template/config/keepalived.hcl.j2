@@ -1,0 +1,5 @@
+template {
+  source = "{{ consul_template_conf_dir }}/templates/keepalived.ctmpl"
+  destination = "/etc/keepalived/keepalived.conf"
+  command = "service keepalived reload"
+}

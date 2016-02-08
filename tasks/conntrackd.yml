@@ -1,0 +1,38 @@
+# tasks file for keepalived
+---
+
+- name: install conntrackd
+  apt:
+    name: "{{ item }}"
+    state: present
+  with_items: conntrackd
+  when: ansible_os_family == 'Debian'
+
+- name: include sysctl variables
+  include_vars: ../firewall/vars/fw/sysctl.yml
+  when: "'fw' in group_names"
+  tags:
+    - conntrackd-conf
+
+- name: update configuration file
+  template:
+    src: etc/conntrackd/conntrackd.conf.j2
+    dest: /etc/conntrackd/conntrackd.conf
+    owner: root
+    group: root
+    mode: 0640
+  notify: restart conntrackd
+  tags:
+    - conntrackd-conf
+
+- name: check script
+  command: cp /usr/share/doc/conntrackd/examples/sync/primary-backup.sh /etc/conntrackd/primary-backup.sh
+  args:
+    creates: /etc/conntrackd/primary-backup.sh
+
+- name: start and enable service
+  service:
+    name: conntrackd
+    state: started
+    enabled: true
+    pattern: /usr/sbin/conntrackd

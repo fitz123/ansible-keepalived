@@ -1,0 +1,158 @@
+# {{ ansible_managed }}
+
+global_defs {
+  notification_email {
+  {% for notification_email in keepalived_global_defs_notification_email -%}
+    {{ notification_email }}
+  {% endfor -%}
+  }
+  notification_email_from {{ keepalived_global_defs_notification_email_from }}
+  smtp_server {{ keepalived_global_defs_smtp_server }}
+  smtp_connect_timeout {{ keepalived_global_defs_smtp_connect_timeout }}
+}
+
+{% for key, value in keepalived_vrrp_scripts.iteritems() -%}
+vrrp_script {{ key }} {
+  script "{{ value.script }}"
+  {% if value.weight is defined -%}
+  weight {{ value.weight }}
+  {% endif -%}
+  {% if value.interval is defined and value.interval | int -%}
+  interval {{ value.interval }}
+  {% endif -%}
+  {% if value.fall is defined and value.fall | int -%}
+  fall {{ value.fall }}
+  {% endif -%}
+  {% if value.rise is defined and value.rise | int -%}
+  rise {{ value.rise }}
+  {% endif -%}
+}
+{% endfor -%}
+
+vrrp_sync_group {{ app }} {
+    group {
+{% for key, value in keepalived_vrrp_instances.iteritems() %}
+      {{ key }}     
+{% endfor %}
+    }
+{% if conntrackd_enabled is defined and conntrackd_enabled %}
+    notify_master "/etc/conntrackd/primary-backup.sh primary"
+    notify_backup "/etc/conntrackd/primary-backup.sh backup"
+    notify_fault "/etc/conntrackd/primary-backup.sh fault"
+{% endif %}
+{% if quagga_enabled is defined and quagga_enabled %}
+{% for key, item in interfaces.iteritems() %}
+{% if item.label == 'RT' %}
+    #notify_master "/sbin/ifup {{ key }}:{{ item.label }}"
+    #notify_backup "/sbin/ifdown {{ key }}:{{ item.label }}"
+    #notify_fault  "/sbin/ifdown {{ key }}:{{ item.label }}"
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if openvpn_enabled is defined and openvpn_enabled %}
+    notify "/etc/keepalived/openvpn.sh"
+{% endif %}
+}
+
+{% for key, value in keepalived_vrrp_instances.iteritems() %}
+vrrp_instance {{ key }} {
+  interface {{ value.interface }}
+  state {{ value.state | default('BACKUP') }}
+  priority {{ value.priority }}
+  virtual_router_id {{ value.virtual_router_id }}
+{% if value.preempt is defined and value.preempt %}
+  preempt
+{% else %}
+  nopreempt
+{% endif %}
+{% if value.advert_int is defined and value.advert_int | int -%}
+  advert_int {{ value.advert_int }}
+{% endif %}
+{% if value.notify is defined %}
+  notify {{ value.notify }}
+{% endif %}  
+  {% if value.smtp_alert is defined and value.smtp_alert | bool -%}
+  smtp_alert
+  {% endif -%}
+
+  authentication {
+    auth_type {{ value.authentication.auth_type | default('PASS') }}
+    auth_pass {{ value.authentication.auth_pass }}
+  }
+
+  virtual_ipaddress {
+{% if key == 'TECH' %}
+{% for key, item in interfaces.iteritems() %}
+{% if (item.label != 'MGMT' and item.label != 'HB' and item.label != 'RT') %}
+    {{ item.ip4_address | ipaddr('host') | ipaddr('1') | ipaddr('address') }} dev {{ key }} label {{ key }}:{{ item.label }}-GW
+{% endif %}
+{% endfor %}
+    {{ masquarade_address }} dev {{ masquerade_interface }} label {{ masquerade_interface }}:MASQ
+{% endif %}
+{% if value.virtual_ipaddresses is defined %}
+{% for item in value.virtual_ipaddresses %}
+    {{ item.ip }} dev {{ item.dev }} label {{ item.dev }}:{{ item.label }}
+{% endfor %}
+{% endif %}
+  }
+
+
+  virtual_routes {
+    default via {{ internet_gateway | ipaddr('address') }} dev {{ masquerade_interface }}
+  }
+
+  track_interface {
+{% if key == 'TECH' %}
+{% for key, item in interfaces.iteritems() %}
+{% if item.label != 'MGMT' %}
+    {{ key }}
+{% endif %}
+{% endfor %}
+    {{ masquerade_interface }}
+{% else %}
+{% for item in value.virtual_ipaddresses %}
+    {{ item.dev }}
+{% endfor %}
+{% endif %}
+  }
+
+  {% if value.track_scripts is defined -%}
+  track_script {
+  {% for track_script in value.track_scripts %}
+  {{ track_script }}
+  {% endfor -%}
+  }
+{% endif -%}
+
+}
+{% endfor %}
+
+{% if keepalived_ipvs_servers is defined %}
+{% for key, value in keepalived_ipvs_servers.iteritems() %}
+# {{ key }}
+virtual_server {{ value.virtual_server_ip }} {{ value.virtual_server_port }} {
+  delay_loop {{ value.delay_loop | default('3') }}
+  lb_algo {{ value.lb_algo | default('rr') }}
+  lb_kind {{ value.lb_kind | default('NAT') }}
+  protocol {{ value.protocol | default('TCP') }}
+  {% if  value.persistence_timeout is defined -%}
+  persistence_timeout {{  value.persistence_timeout }}
+  {% endif -%}
+  {% if value.ha_suspend is defined and ha_suspend | bool -%}
+  ha_suspend
+  {% endif %}
+
+{{ '{{' }}range service "{{ key }}"{{ '}}' }} 
+  real_server {{ '{{' }}.Address{{ '}}' }} {{ '{{' }}.Port{{ '}}' }} {
+    weight 1
+{% if value.tcp_checks is not defined or value.tcp_checks %}
+    TCP_CHECK {
+      connect_port {{ '{{' }}.Port{{ '}}' }}
+      connect_timeout 3
+    }
+{% endif %}
+  }{{ '{{' }}end{{ '}}' }} 
+
+}
+{% endfor -%}
+{% endif %}

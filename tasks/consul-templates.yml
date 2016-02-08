@@ -1,0 +1,30 @@
+---
+
+- name: Check consul-template dirs
+  file: path={{ item }}
+        state=directory
+        owner=root group=adm
+        recurse=yes
+  with_items:
+    - "{{ consul_template_conf_dir }}/templates"
+    - "{{ consul_template_conf_dir }}/config"
+
+- name: Consul keepalived template
+  template: src=etc/consul-template/templates/keepalived.ctmpl.j2
+            dest={{ consul_template_conf_dir }}/templates/keepalived.ctmpl
+            owner=root
+            group=adm
+            mode=0460
+  notify: 
+    - restart consul-template
+    - restart keepalived
+
+- name: Consul configs
+  template: src=etc/consul-template/config/keepalived.hcl.j2
+            dest={{ consul_template_conf_dir }}/config/keepalived.hcl
+            owner=root
+            group=adm
+            mode=0460
+  notify: 
+    - restart consul-template
+    - restart keepalived
