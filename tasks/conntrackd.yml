@@ -8,12 +8,6 @@
   with_items: conntrackd
   when: ansible_os_family == 'Debian'
 
-- name: include sysctl variables
-  include_vars: ../firewall/vars/fw/sysctl.yml
-  when: "'fw' in group_names"
-  tags:
-    - conntrackd-conf
-
 - name: update configuration file
   template:
     src: etc/conntrackd/conntrackd.conf.j2
