@@ -87,7 +87,7 @@ vrrp_instance {{ key }} {
     {{ item.ip4_address | ipaddr('host') | ipaddr('1') | ipaddr('address') }} brd {{ item.ip4_address | ipaddr('broadcast') }} dev {{ key }} label {{ key }}:{{ item.label }}-GW
 {% endif %}
 {% endfor %}
-    {{ masquarade_address | ipaddr('host') }} brd {{ masquarade_address | ipaddr('broadcast') }} dev {{ masquerade_interface }} label {{ masquerade_interface }}:MASQ
+    {{ masquerade_address | ipaddr('host') }} brd {{ masquerade_address | ipaddr('broadcast') }} dev {{ masquerade_interface }} label {{ masquerade_interface }}:MASQ
 {% endif %}
 {% if value.virtual_ipaddresses is defined %}
 {% for item in value.virtual_ipaddresses %}
