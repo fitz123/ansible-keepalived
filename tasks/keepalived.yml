@@ -4,7 +4,7 @@
   yum:
     name: "{{ item }}"
     state: present
-  with_items: keepalived_dependencies
+  with_items: '{{ keepalived_dependencies }}'
   when: ansible_os_family == 'RedHat'
   tags:
     - configuration
@@ -16,7 +16,7 @@
   apt:
     name: "{{ item }}"
     state: present
-  with_items: keepalived_dependencies
+  with_items: '{{ keepalived_dependencies }}'
   when: ansible_os_family == 'Debian'
   tags:
     - configuration
