@@ -31,7 +31,7 @@
     owner: root
     group: root
     mode: 0640
-  notify: restart keepalived
+  notify: reload keepalived
   #when: consul_template is not defined or not consul_template
   tags:
     - configuration

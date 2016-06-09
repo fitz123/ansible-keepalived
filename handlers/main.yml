@@ -11,6 +11,4 @@
     state: restarted
 
 - name: reload keepalived
-  service:
-    name: keepalived
-    state: reloaded
+  command: service keepalived reload
