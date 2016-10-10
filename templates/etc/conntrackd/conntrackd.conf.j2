@@ -103,7 +103,7 @@ Sync {
 		# The name of the interface that you are going to use to
 		# send the synchronization messages.
 		#
-		Interface eth5
+		Interface {{ conntrackd_interface | default('eth5') }}
 
 		# The multicast sender uses a buffer to enqueue the packets
 		# that are going to be transmitted. The default size of this
