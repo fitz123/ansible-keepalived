@@ -91,7 +91,9 @@ vrrp_instance {{ key }} {
 {% endif %}
 {% if value.virtual_ipaddresses is defined %}
 {% for item in value.virtual_ipaddresses %}
+{% if item.vrrp is not defined or item.vrrp %}
     {{ item.ip | ipaddr('host') }} brd {{ item.ip | ipaddr('broadcast') }} dev {{ item.dev }} label {{ item.dev }}:{{ item.label }}
+{% endif %}
 {% endfor %}
 {% endif %}
   }
